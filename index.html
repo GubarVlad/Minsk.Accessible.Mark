@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Minsk&nbsp;Accessible · Разметка доступности</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Mapillary JS -->
+<link rel="stylesheet" href="https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.css" />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ============ HEADER ============ -->
+  <header class="topbar">
+    <div class="topbar__brand">
+      <span class="topbar__title">Minsk&nbsp;Accessible</span>
+    </div>
+
+    <div class="topbar__status" id="modelStatus" data-state="loading">
+      <span class="dot"></span>
+      <span class="topbar__status-text">Модель загружается…</span>
+    </div>
+
+    <div class="topbar__progress">
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <span class="mono" id="progressLabel">0 / 0</span>
+    </div>
+
+    <div class="topbar__account">
+      <span class="mono" id="userLabel">гость</span>
+      <button class="btn btn--ghost" id="authBtn">Войти</button>
+    </div>
+  </header>
+
+  <!-- ============ MAIN GRID ============ -->
+  <main class="workspace">
+
+    <!-- ---- VIEWER PANE (left) ---- -->
+    <section class="pane pane--viewer">
+      <div class="pane__header">
+        <span class="pane__title">Панорама</span>
+        <span class="mono pane__meta" id="imageIdLabel">—</span>
+      </div>
+
+      <div class="viewer-stack" id="viewerStack">
+        <div id="mapillaryViewer" class="viewer-layer"></div>
+
+        <div class="viewer-empty" id="viewerEmpty">
+          <p>Нет загруженных панорам.</p>
+          <p class="muted">Дождитесь загрузки снимков Mapillary</p>
+        </div>
+
+        <div class="viewer-mode" id="viewerMode" hidden>
+          <span class="viewer-mode__text" id="viewerModeText">Просмотр</span>
+        </div>
+
+        <div class="class-picker" id="classPicker" hidden>
+          <span class="class-picker__hint">Выбери класс объекта · Esc — отмена</span>
+        </div>
+      </div>
+
+      <div class="legend" id="detectionLegend"></div>
+    </section>
+
+    <!-- ---- SIDE PANEL (right) ---- -->
+    <aside class="pane pane--side">
+
+      <div class="side-section side-section--map">
+        <div class="pane__header">
+          <span class="pane__title">Карта</span>
+          <button class="btn btn--tiny" id="mapDragToggle" title="Включить перетаскивание меток">
+            <span class="btn__icon">✥</span> Переместить метку
+          </button>
+        </div>
+        <div id="mapView" class="map-view"></div>
+        <p class="side-hint" id="mapHint">Клик по метке — открыть фото · ПКМ — удалить</p>
+      </div>
+
+      <div class="side-section side-section--objects">
+        <div class="pane__header">
+          <span class="pane__title">Объекты на кадре</span>
+          <span class="badge mono" id="objectCount">0</span>
+        </div>
+
+        <div class="detection-list" id="detectionList" hidden></div>
+
+        <div class="detection-empty" id="detectionListEmpty">
+          <span class="detection-empty__icon">◎</span>
+          <p>Объектов не найдено</p>
+          <p class="muted">Нажми <kbd>4</kbd> или «Добавить», чтобы разметить вручную</p>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- ============ ACTION BAR ============ -->
+  <footer class="actionbar">
+
+    <div class="actionbar__current" id="currentDetection">
+      <span class="actionbar__step-label">Выбранный объект</span>
+      <div class="actionbar__detection-row">
+        <span class="actionbar__label mono" id="currentLabel">—</span>
+        <span class="actionbar__confidence mono" id="currentConfidence">выберите объект справа</span>
+      </div>
+    </div>
+
+    <div class="keycaps">
+      <button class="keycap keycap--yes" data-action="confirm" title="Подтвердить (1)">
+        <span class="keycap__key">1</span>
+        <span class="keycap__text">Подтвердить</span>
+      </button>
+      <button class="keycap keycap--no" data-action="reject" title="Отклонить (2)">
+        <span class="keycap__key">2</span>
+        <span class="keycap__text">Отклонить</span>
+      </button>
+      <button class="keycap keycap--fix" data-action="correct" title="Исправить рамку (3)">
+        <span class="keycap__key">3</span>
+        <span class="keycap__text">Исправить</span>
+      </button>
+      <button class="keycap keycap--add" data-action="add_manual" title="Добавить вручную (4)">
+        <span class="keycap__key">4</span>
+        <span class="keycap__text">Добавить</span>
+      </button>
+      <button class="keycap keycap--skip" data-action="skip" title="Пропустить фото (Space)">
+        <span class="keycap__key">Space</span>
+        <span class="keycap__text">Пропустить</span>
+      </button>
+    </div>
+
+    <div class="actionbar__meta mono" id="coordsLabel">lat 0.000000, lng 0.000000</div>
+
+    <div class="actionbar__edit" id="editorControls" hidden>
+      <span class="actionbar__edit-hint mono" id="editorHint">Тяни за уголки · клик вне рамки или Enter — сохранить · Esc — отмена</span>
+    </div>
+  </footer>
+
+  <!-- ============ DELETE MODAL ============ -->
+  <dialog class="modal" id="deleteModal">
+    <div class="modal__content">
+      <h3 class="modal__title">Удалить метку?</h3>
+      <p class="modal__text" id="deleteModalText">Это действие нельзя отменить.</p>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" id="deleteModalCancel">Отмена</button>
+        <button class="btn btn--danger" id="deleteModalConfirm">Удалить</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ============ AUTH MODAL (email/пароль) ============ -->
+  <dialog class="modal" id="authModal">
+    <div class="modal__content">
+      <h3 class="modal__title">Вход</h3>
+      <div class="modal__field">
+        <input type="email" id="authEmail" class="modal__input" placeholder="Email" autocomplete="username" />
+      </div>
+      <div class="modal__field">
+        <input type="password" id="authPassword" class="modal__input" placeholder="Пароль" autocomplete="current-password" />
+      </div>
+      <p class="modal__error" id="authError" hidden></p>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" id="authModalCancel">Отмена</button>
+       <!-- <button class="btn btn--ghost" id="authModalRegister">Зарегистрироваться</button> -->
+        <button class="btn btn--solid" id="authModalLogin">Войти</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ============ SCRIPTS ============ -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script src="js/config.js"></script>
+  <script src="js/firebase.js"></script>
+  <script src="js/mapillary-api.js"></script>
+  <script src="js/yolo.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/viewer.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
